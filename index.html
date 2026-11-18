@@ -1,16 +1,183 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>雪崩大逃亡</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f2e9;color:#3a3228;font-family:system-ui,sans-serif}.card{max-width:680px;margin:2rem;padding:2rem;border:1px solid #d8d3c4;border-radius:18px;background:#fffdf7;box-shadow:0 12px 40px rgba(58,50,40,.08)}h1{margin-top:0}a{color:#5f7d54}</style>
-</head>
-<body>
-<main class="card">
-<h1>雪崩大逃亡</h1>
-<p>3D 网页滑雪冒险小游戏。</p>
-<p><a href="https://me.strangeyu.xyz/projects/Snowbound/">返回项目详情页</a></p>
-</main>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="雪崩大逃亡 —— 3D 滑雪大冒险，动物接力、空翻加速、无限雪山，免登录即玩。"
+    />
+    <title>雪崩大逃亡 · 3D 滑雪大冒险</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 54 L24 20 L32 32 L42 14 L60 54 Z' fill='%23e9f1fa' stroke='%231468a8' stroke-width='4'/%3E%3C/svg%3E"
+    />
+    <script type="module" crossorigin src="./assets/index-BvESJ31y.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/noise-BUuZjVDc.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-aUTMW1gK.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene" tabindex="0" aria-label="游戏画面"></canvas>
+
+      <!-- 加载 -->
+      <section id="loading" class="screen">
+        <div class="panel loading-panel">
+          <h1 class="title">雪线漫游</h1>
+          <p class="subtitle">一段冬日旅程</p>
+          <div class="progress">
+            <div class="progress-bar" id="load-bar"></div>
+          </div>
+          <p class="load-status" id="load-status">正在启动…</p>
+          <div class="load-error hidden" id="load-error">
+            <p id="load-error-text"></p>
+            <div class="row">
+              <button class="btn primary" id="btn-retry">重试</button>
+              <button class="btn" id="btn-fallback">使用占位地形继续</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 开始界面 -->
+      <section id="menu" class="screen hidden">
+        <div class="menu-wrap">
+          <div class="menu-head">
+            <h1 class="title big">雪线<span>漫游</span></h1>
+            <p class="subtitle">沿着松林，滑向山谷。</p>
+          </div>
+          <div class="menu-main">
+            <div class="panel menu-panel">
+              <button class="btn primary large" id="btn-timed">开始竞速</button>
+              <button class="btn large" id="btn-free">自由滑行</button>
+              <button class="btn" id="btn-settings">设置</button>
+              <p class="best" id="menu-best">等待你的第一趟</p>
+            </div>
+            <nav class="course-links" aria-label="其他玩法">
+              <a href="?">雪崩冒险 <span>→</span></a
+              ><a href="?course=wild">山脊挑战 <span>→</span></a>
+            </nav>
+          </div>
+          <details class="course-help course-menu-help">
+            <summary>怎么玩</summary>
+            <p>
+              W 撑杖出发，A/D 转向，S 刹车，空格跳跃，R 回到检查点，Esc 暂停。
+            </p>
+            <p>竞速要依次通过全部旗门；重置加罚 5 秒。自由滑行不计成绩。</p>
+            <p class="data-note" id="data-note"></p>
+          </details>
+        </div>
+      </section>
+
+      <!-- 游戏 HUD -->
+      <section id="hud" class="hidden" aria-live="polite">
+        <div class="hud-top">
+          <div class="hud-box hud-time">
+            <span class="hud-label" id="hud-mode">计时挑战</span>
+            <span class="hud-value" id="hud-time">0:00.0</span>
+            <span class="hud-sub" id="hud-penalty"></span>
+          </div>
+          <div class="hud-box hud-progress">
+            <div class="hud-route" id="hud-route">雪线主道</div>
+            <div class="pbar">
+              <div class="pbar-fill" id="hud-pfill"></div>
+              <div class="pbar-ticks" id="hud-pticks"></div>
+            </div>
+            <div class="hud-sub" id="hud-cp">0 / 4</div>
+          </div>
+          <button class="course-pause" id="btn-hud-pause" aria-label="暂停">
+            Ⅱ
+          </button>
+          <div class="hud-box hud-fps hidden" id="hud-fps">-- FPS</div>
+        </div>
+        <div class="hud-speed">
+          <span class="hud-value" id="hud-speed">0</span
+          ><span class="hud-unit">km/h</span>
+          <div class="hud-state" id="hud-state"></div>
+        </div>
+        <div class="hud-toast" id="hud-toast"></div>
+        <div class="hud-warn hidden" id="hud-warn">偏离雪道 · R 返回</div>
+        <div class="hud-keys" id="hud-keys">
+          A/D 转向 · W 收身/撑杖 · S 刹车 · 空格 跳跃 · R 回检查点 · Esc 暂停
+        </div>
+      </section>
+
+      <!-- 暂停 -->
+      <section id="pause" class="screen hidden">
+        <div class="panel small-panel">
+          <h2>已暂停</h2>
+          <p class="hint">计时与运动已停止</p>
+          <details class="course-help">
+            <summary>操作与规则</summary>
+            <p>W 撑杖 / 收身，A/D 转向，S 刹车，空格跳跃，R 重置，Esc 暂停。</p>
+            <p>沿旗门通过所有检查点。竞速重置加罚 5 秒。</p>
+          </details>
+          <button class="btn primary" id="btn-resume">继续</button>
+          <button class="btn" id="btn-restart">重新开始</button>
+          <button class="btn" id="btn-pause-settings">设置</button>
+          <button class="btn" id="btn-menu">返回主菜单</button>
+        </div>
+      </section>
+
+      <!-- 结算 -->
+      <section id="results" class="screen hidden">
+        <div class="panel small-panel">
+          <h2 id="res-title">完成！</h2>
+          <div class="res-time" id="res-time">0:00.0</div>
+          <div class="res-badge hidden" id="res-badge">新纪录</div>
+          <dl class="res-list" id="res-list"></dl>
+          <button class="btn primary" id="btn-again">再来一次</button>
+          <button class="btn" id="btn-switch-mode">切换为自由滑行</button>
+          <button class="btn" id="btn-res-menu">返回主菜单</button>
+        </div>
+      </section>
+
+      <!-- 设置 -->
+      <section id="settings" class="screen hidden">
+        <div class="panel small-panel settings-panel">
+          <h2>设置</h2>
+          <div class="field">
+            <span>画质</span>
+            <div class="seg" id="set-quality">
+              <button data-v="low">低</button><button data-v="medium">中</button
+              ><button data-v="high">高</button>
+            </div>
+          </div>
+          <p class="hint" id="set-quality-hint"></p>
+          <div class="field">
+            <span>音量</span>
+            <input type="range" id="set-volume" min="0" max="100" step="1" />
+            <label class="check"
+              ><input type="checkbox" id="set-mute" />静音</label
+            >
+          </div>
+          <div class="field">
+            <span>镜头距离</span>
+            <div class="seg" id="set-camera">
+              <button data-v="near">近</button
+              ><button data-v="normal">标准</button
+              ><button data-v="far">远</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="check"
+              ><input type="checkbox" id="set-fps" />显示帧率</label
+            >
+          </div>
+          <div class="row">
+            <button class="btn" id="btn-clear-records">清除最佳成绩</button>
+            <button class="btn primary" id="btn-settings-close">完成</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="debug" class="hidden"></div>
+      <noscript
+        ><div class="noscript">需要启用 JavaScript 才能游玩。</div></noscript
+      >
+    </div>
+  </body>
 </html>
